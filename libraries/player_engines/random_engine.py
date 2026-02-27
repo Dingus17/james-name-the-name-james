@@ -38,7 +38,7 @@ class RandomPlayerEngine:
             return None
 
         random_factor = random.uniform(0.75, 1.25)
-        confidence_threshold = exp(-gap / (6.5 * random_factor)) * (1 + round_number * 0.6)
+        confidence_threshold = exp(-gap / (6.5 * random_factor)) * (1 + round_number * 0.2)
         if confidence_threshold <= 0.5:
             return None
 

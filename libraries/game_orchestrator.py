@@ -39,6 +39,7 @@ class GameOrchestrator:
         while True:
             for player in self.players:
                 if player.engine.decide_to_start(player.hand, waiting_cycles):
+                    print(f"{player.name} decided to play first after waiting {waiting_cycles} cycles.")
                     self.leading_player = player
                     self._execute_play(player, round_number=1, forced=True)
                     return
@@ -60,7 +61,9 @@ class GameOrchestrator:
 
         forced_player = self._find_forced_player()
         if forced_player is None:
-            return
+            return  
+    
+        print(f"{forced_player.name} should have played a tile.")
 
         forced_player.points -= self.config.points.forced_play_penalty
         self._execute_play(forced_player, round_number=2, forced=True)
@@ -77,6 +80,7 @@ class GameOrchestrator:
                 self._other_player_hand_sizes(player),
             )
             if tile is None:
+                print(f"{player.name} chose not to play a tile in round {round_number}.")
                 continue
             self._execute_play(player, round_number)
             return player
@@ -93,8 +97,11 @@ class GameOrchestrator:
         )
         if tile is None:
             return
+        
+        print(f"{player.name} placed {tile}.")
 
         skipped_plays = self._collect_skipped_tiles(player, last_tile_before_play, tile)
+        
         self._resolve_skipped_plays(player, skipped_plays)
 
         self.game_board.place_tile(tile)
@@ -119,6 +126,7 @@ class GameOrchestrator:
                 continue
             for tile in sorted(other_player.hand):
                 if low_bound < tile < played_tile:
+                    print(f"{other_player.name} had {tile} and was leapfrogged by {acting_player.name}'s play of {played_tile}.")
                     skipped_tiles.append((tile, other_player))
         skipped_tiles.sort(key=lambda skipped_play: skipped_play[0])
         return skipped_tiles
@@ -166,4 +174,4 @@ class GameOrchestrator:
     def _print_final_scores(self) -> None:
         print("Final scores")
         for player in self.players:
-            print(f"- {player.name}: {player.points} points, remaining hand={sorted(player.hand)}")
+            print(f"- {player.name}: {player.points} points!")
