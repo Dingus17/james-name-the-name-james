@@ -9,7 +9,7 @@ class RandomPlayerEngine:
     def decide_to_start(self, hand: list[int], time_waited: int = 0) -> bool:
         if not hand:
             return False
-        confidence_threshold = 8 + time_waited
+        confidence_threshold = 2 + time_waited
         return min(hand) <= confidence_threshold
 
     def choose_tile_to_play(
