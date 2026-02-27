@@ -70,7 +70,12 @@ class GameOrchestrator:
         for player in turn_order:
             if not player.has_tiles():
                 continue
-            tile = player.engine.choose_tile_to_play(player.hand, self.game_board.last_tile)
+            tile = player.engine.choose_tile_to_play(
+                player.hand,
+                self.game_board.last_tile,
+                round_number,
+                self._other_player_hand_sizes(player),
+            )
             if tile is None:
                 continue
             self._execute_play(player, round_number)
@@ -79,7 +84,12 @@ class GameOrchestrator:
 
     def _execute_play(self, player: Player, round_number: int) -> None:
         last_tile_before_play = self.game_board.last_tile
-        tile = player.engine.choose_tile_to_play(player.hand, last_tile_before_play)
+        tile = player.engine.choose_tile_to_play(
+            player.hand,
+            last_tile_before_play,
+            round_number,
+            self._other_player_hand_sizes(player),
+        )
         if tile is None:
             return
 
@@ -140,6 +150,9 @@ class GameOrchestrator:
 
         leader_index = self.players.index(self.leading_player)
         return self.players[leader_index:] + self.players[:leader_index]
+
+    def _other_player_hand_sizes(self, acting_player: Player) -> list[int]:
+        return [len(player.hand) for player in self.players if player is not acting_player]
 
     def _game_over(self) -> bool:
         if len(self.game_board.placed_tiles) >= self.config.board_size:
