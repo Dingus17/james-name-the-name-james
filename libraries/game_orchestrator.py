@@ -68,6 +68,8 @@ class GameOrchestrator:
 
     def _play_round(self, turn_order: list[Player], round_number: int) -> Player | None:
         for player in turn_order:
+            if not player.has_tiles():
+                continue
             tile = player.engine.choose_tile_to_play(player.hand, self.game_board.last_tile)
             if tile is None:
                 continue
@@ -81,28 +83,44 @@ class GameOrchestrator:
         if tile is None:
             return
 
+        skipped_plays = self._collect_skipped_tiles(player, last_tile_before_play, tile)
+        self._resolve_skipped_plays(player, skipped_plays)
+
         self.game_board.place_tile(tile)
         player.remove_tile(tile)
 
         if round_number == 1:
             player.points += self.config.points.first_round_play
-            self._apply_leapfrog_points(player, last_tile_before_play, tile)
         else:
             player.points += self.config.points.second_round_play
 
-    def _apply_leapfrog_points(
+    def _collect_skipped_tiles(
         self,
         acting_player: Player,
         last_tile_before_play: int | None,
         played_tile: int,
-    ) -> None:
+    ) -> list[tuple[int, Player]]:
         low_bound = last_tile_before_play if last_tile_before_play is not None else 0
+        skipped_tiles: list[tuple[int, Player]] = []
         for other_player in self.players:
             if other_player is acting_player:
                 continue
-            if any(low_bound < tile < played_tile for tile in other_player.hand):
-                other_player.points += self.config.points.first_round_leapfrog_steal
-                acting_player.points -= self.config.points.first_round_leapfrog_steal
+            for tile in sorted(other_player.hand):
+                if low_bound < tile < played_tile:
+                    skipped_tiles.append((tile, other_player))
+        skipped_tiles.sort(key=lambda skipped_play: skipped_play[0])
+        return skipped_tiles
+
+    def _resolve_skipped_plays(
+        self,
+        acting_player: Player,
+        skipped_tiles: list[tuple[int, Player]],
+    ) -> None:
+        for tile, skipped_player in skipped_tiles:
+            self.game_board.place_tile(tile)
+            skipped_player.remove_tile(tile)
+            skipped_player.points += self.config.points.first_round_leapfrog_steal
+            acting_player.points -= self.config.points.first_round_leapfrog_steal
 
     def _find_forced_player(self) -> Player | None:
         lowest_player: Player | None = None
@@ -127,8 +145,6 @@ class GameOrchestrator:
         if len(self.game_board.placed_tiles) >= self.config.board_size:
             return True
         if all(not player.has_tiles() for player in self.players):
-            return True
-        if self._find_forced_player() is None:
             return True
         return False
 
