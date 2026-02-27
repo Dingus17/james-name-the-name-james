@@ -1,40 +1,31 @@
-import random
+from __future__ import annotations
 
 from libraries.bag import TileBag
-from libraries.board import GameBoard
+
 
 class Player:
-    def __init__(self, name, engine):
+    def __init__(self, name: str, engine, start_points: int):
         self.name = name
         self.engine = engine
-        self.hand = []
-        self.points = 10
+        self.hand: list[int] = []
+        self.points = start_points
 
-    def draw_tile(self, tile_bag: TileBag):
+    def draw_tile(self, tile_bag: TileBag) -> None:
         tile = tile_bag.draw_tile()
         if tile is not None:
             self.hand.append(tile)
-            print(f"{self.name} drew tile {tile}. Current hand: {self.hand}")
-        else:
-            print(f"{self.name} could not draw a tile because the bag is empty.")
 
-    def place_tile(self, board: GameBoard):
-        tile_to_play = self.engine.select_tile_to_play(self.hand, board)
-        board.place_next_time(tile_to_play)
-        print(f"{self.name} placed tile {tile_to_play} on the board.")
-        return tile_to_play
+    def sorted_hand(self) -> list[int]:
+        return sorted(self.hand)
 
-    def draw_tile(self, tile_bag: TileBag):
-        tile = tile_bag.draw_tile()
-        if tile is not None:
-            self.hand.append(tile)
-            print(f"{self.name} drew tile {tile}. Current hand: {self.hand}")
-        else:
-            print(f"{self.name} could not draw a tile because the bag is empty.")
+    def lowest_playable_tile(self, last_tile: int | None) -> int | None:
+        for tile in self.sorted_hand():
+            if last_tile is None or tile > last_tile:
+                return tile
+        return None
 
-    def choose_to_start(self, time_waited: int = 0):
-        return self.engine.decide_to_start(self.hand, time_waited)
-        
+    def remove_tile(self, tile: int) -> None:
+        self.hand.remove(tile)
 
-if __name__ == "__main__":
-    main()
+    def has_tiles(self) -> bool:
+        return len(self.hand) > 0
