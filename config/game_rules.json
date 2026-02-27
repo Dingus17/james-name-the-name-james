@@ -1,0 +1,13 @@
+{
+  "board_size": 100,
+  "min_tile": 1,
+  "max_tile": 100,
+  "hand_size": 10,
+  "points": {
+    "start_points": 10,
+    "first_round_play": 2,
+    "first_round_leapfrog_steal": 2,
+    "second_round_play": 1,
+    "forced_play_penalty": 4
+  }
+}
