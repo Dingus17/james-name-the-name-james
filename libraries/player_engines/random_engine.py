@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from math import exp
+import random
 
 
 class RandomPlayerEngine:
@@ -18,6 +19,7 @@ class RandomPlayerEngine:
         last_tile: int | None,
         round_number: int,
         other_player_hand_sizes: list[int],
+        forced: bool = False
     ) -> int | None:
         _ = other_player_hand_sizes
         playable = [tile for tile in sorted(hand) if last_tile is None or tile > last_tile]
@@ -25,6 +27,9 @@ class RandomPlayerEngine:
             return None
 
         selected_tile = playable[0]
+        if forced:
+            return selected_tile
+
         if last_tile is None:
             return selected_tile
 
@@ -32,8 +37,9 @@ class RandomPlayerEngine:
         if gap > 12:
             return None
 
-        confidence_threshold = exp(-gap / 4) * (1 + round_number * 0.5)
-        if confidence_threshold <= 0.1:
+        random_factor = random.uniform(0.75, 1.25)
+        confidence_threshold = exp(-gap / (6.5 * random_factor)) * (1 + round_number * 0.6)
+        if confidence_threshold <= 0.5:
             return None
 
         return selected_tile

@@ -40,7 +40,7 @@ class GameOrchestrator:
             for player in self.players:
                 if player.engine.decide_to_start(player.hand, waiting_cycles):
                     self.leading_player = player
-                    self._execute_play(player, round_number=1)
+                    self._execute_play(player, round_number=1, forced=True)
                     return
             waiting_cycles += 1
 
@@ -63,7 +63,7 @@ class GameOrchestrator:
             return
 
         forced_player.points -= self.config.points.forced_play_penalty
-        self._execute_play(forced_player, round_number=2)
+        self._execute_play(forced_player, round_number=2, forced=True)
         self.leading_player = forced_player
 
     def _play_round(self, turn_order: list[Player], round_number: int) -> Player | None:
@@ -82,13 +82,14 @@ class GameOrchestrator:
             return player
         return None
 
-    def _execute_play(self, player: Player, round_number: int) -> None:
+    def _execute_play(self, player: Player, round_number: int, forced: bool = False) -> None:
         last_tile_before_play = self.game_board.last_tile
         tile = player.engine.choose_tile_to_play(
             player.hand,
             last_tile_before_play,
             round_number,
-            self._other_player_hand_sizes(player),
+            other_player_hand_sizes=self._other_player_hand_sizes(player),
+            forced=forced
         )
         if tile is None:
             return
@@ -99,10 +100,11 @@ class GameOrchestrator:
         self.game_board.place_tile(tile)
         player.remove_tile(tile)
 
-        if round_number == 1:
-            player.points += self.config.points.first_round_play
-        else:
-            player.points += self.config.points.second_round_play
+        if not forced or self.turn_count == 1:
+            if round_number == 1:
+                player.points += self.config.points.first_round_play
+            else:
+                player.points += self.config.points.second_round_play
 
     def _collect_skipped_tiles(
         self,
