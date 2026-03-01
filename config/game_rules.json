@@ -10,6 +10,27 @@
     "second_round_play": 2,
     "second_round_leapfrog_steal": 3,
     "forced_play_penalty": 5
-  }
+  },
+  "players": [
+    {
+      "name": "ML Agent 1",
+      "engine": "ml",
+      "model_path": "models/leapfrog_ppo.zip",
+      "deterministic": true
+    },
+    {
+      "name": "ML Agent 2",
+      "engine": "ml",
+      "model_path": "models/leapfrog_ppo.zip",
+      "deterministic": true
+    },
+    {
+      "name": "Cautious",
+      "engine": "cautious"
+    },
+    {
+      "name": "Very Confident",
+      "engine": "very_confident"
+    }
+  ]
 }
-l

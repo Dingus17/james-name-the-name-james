@@ -1,12 +1,7 @@
 from libraries.game_config import load_config
 from libraries.game_orchestrator import GameOrchestrator
 from libraries.player import Player
-from libraries.player_engines.random_engine import RandomPlayerEngine
-from libraries.player_engines.cautious_engine import RandomPlayerEngine as CautiousPlayerEngine
-from libraries.player_engines.confident_engine import RandomPlayerEngine as ConfidentPlayerEngine
-from libraries.player_engines.very_random_engine import RandomPlayerEngine as VeryRandomPlayerEngine
-from libraries.player_engines.very_confident_engine import RandomPlayerEngine as VeryConfidentPlayerEngine
-from libraries.player_engines.very_cautious_engine import RandomPlayerEngine as VeryCautiousPlayerEngine
+from libraries.player_engines.engine_factory import create_player_engine
 
 def run_game_set(num_games: int) -> None:
     results_list = []
@@ -61,15 +56,13 @@ def compute_statistics(results: list[dict[str, dict[str, int]]]) -> None:
 
 def run_game() -> None:
     config = load_config("config/game_rules.json")
-    players = [
-        
-        Player("Random", RandomPlayerEngine(), config.points.start_points),
-        Player("Very Random", VeryRandomPlayerEngine(), config.points.start_points),
-        Player("Cautious", CautiousPlayerEngine(), config.points.start_points),
-        Player("Very Cautious", VeryCautiousPlayerEngine(), config.points.start_points),    
-        Player("Confident", ConfidentPlayerEngine(), config.points.start_points),
-        Player("Very Confident", VeryConfidentPlayerEngine(), config.points.start_points),
-    ]
+    players = []
+    num_players = len(config.players)
+
+    for player_config in config.players:
+        engine = create_player_engine(player_config, config, num_players)
+        players.append(Player(player_config.name, engine, config.points.start_points))
+
     game = GameOrchestrator(players, config)
     results = game.play()
     return results
@@ -77,4 +70,3 @@ def run_game() -> None:
 
 if __name__ == "__main__":
     run_game_set(1000)
-
