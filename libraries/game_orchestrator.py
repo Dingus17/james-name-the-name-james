@@ -20,6 +20,18 @@ class GameOrchestrator:
         for player in self.players:
             for _ in range(self.config.hand_size):
                 player.draw_tile(self.tile_bag)
+            print("{}'s starting hand: {}".format(player.name, sorted(player.hand)))
+    
+    def _get_final_scores(self) -> dict[str, int]:
+        results = {}
+        for player in self.players:
+            results[player.name] = {
+                "points": player.points,
+                "leapfrogs": player.leapfrogs,
+                "leapfrogged": player.leapfrogged,
+                "penalties": player.penalties
+            }
+        return results
 
     def play(self) -> None:
         if not self.players:
@@ -28,9 +40,12 @@ class GameOrchestrator:
         self._first_turn()
 
         while not self._game_over():
+            print("\n--- Turn {} ---".format(self.turn_count))
             self._next_structured_turn()
+            self._print_scores()
 
         self._print_final_scores()
+        return self._get_final_scores()
 
     def _first_turn(self) -> None:
         self.turn_count += 1
@@ -63,9 +78,10 @@ class GameOrchestrator:
         if forced_player is None:
             return  
     
-        print(f"{forced_player.name} should have played a tile.")
+        print(f"{forced_player.name} should have played {forced_player.sorted_hand()[0]}.")
 
         forced_player.points -= self.config.points.forced_play_penalty
+        forced_player.penalties += 1
         self._execute_play(forced_player, round_number=2, forced=True)
         self.leading_player = forced_player
 
@@ -73,36 +89,31 @@ class GameOrchestrator:
         for player in turn_order:
             if not player.has_tiles():
                 continue
-            tile = player.engine.choose_tile_to_play(
+            tile, confidence, confidence_threshold = player.engine.choose_tile_to_play(
                 player.hand,
                 self.game_board.last_tile,
                 round_number,
                 self._other_player_hand_sizes(player),
             )
             if tile is None:
-                print(f"{player.name} chose not to play a tile in round {round_number}.")
+                print(f"{player.name} chose not to play {player.sorted_hand()[0]} in round {round_number}. Confidence: {confidence:.2f} (threshold: {confidence_threshold:.2f})")
                 continue
+            print(f"{player.name} chose to play {tile} in round {round_number}. Confidence: {confidence:.2f} (threshold: {confidence_threshold:.2f})")
             self._execute_play(player, round_number)
             return player
         return None
 
     def _execute_play(self, player: Player, round_number: int, forced: bool = False) -> None:
         last_tile_before_play = self.game_board.last_tile
-        tile = player.engine.choose_tile_to_play(
-            player.hand,
-            last_tile_before_play,
-            round_number,
-            other_player_hand_sizes=self._other_player_hand_sizes(player),
-            forced=forced
+        tile = player.lowest_playable_tile(last_tile_before_play
         )
         if tile is None:
             return
         
-        print(f"{player.name} placed {tile}.")
-
         skipped_plays = self._collect_skipped_tiles(player, last_tile_before_play, tile)
-        
-        self._resolve_skipped_plays(player, skipped_plays)
+
+        if skipped_plays:
+            self._resolve_skipped_plays(player, skipped_plays, round_number)
 
         self.game_board.place_tile(tile)
         player.remove_tile(tile)
@@ -135,12 +146,19 @@ class GameOrchestrator:
         self,
         acting_player: Player,
         skipped_tiles: list[tuple[int, Player]],
+        round_number: int
     ) -> None:
         for tile, skipped_player in skipped_tiles:
             self.game_board.place_tile(tile)
             skipped_player.remove_tile(tile)
-            skipped_player.points += self.config.points.first_round_leapfrog_steal
-            acting_player.points -= self.config.points.first_round_leapfrog_steal
+            if round_number == 1:
+                penalty = self.config.points.first_round_leapfrog_steal
+            else:
+                penalty = self.config.points.second_round_leapfrog_steal
+            skipped_player.points += penalty
+            skipped_player.leapfrogged += 1
+            acting_player.points -= penalty 
+            acting_player.leapfrogs += 1
 
     def _find_forced_player(self) -> Player | None:
         lowest_player: Player | None = None
@@ -173,5 +191,10 @@ class GameOrchestrator:
 
     def _print_final_scores(self) -> None:
         print("Final scores")
+        for player in self.players:
+            print(f"- {player.name}: {player.points} points!")
+
+    def _print_scores(self) -> None:
+        print(f"Turn {self.turn_count} scores")
         for player in self.players:
             print(f"- {player.name}: {player.points} points!")

@@ -34,9 +34,9 @@ class RandomPlayerEngine:
             return selected_tile, None, None
 
         gap = selected_tile - last_tile
-        confidence_threshold = 0.7
+        confidence_threshold = 0.9
 
-        random_factor = random.uniform(0.75, 1.25)
+        random_factor = random.uniform(0.9, 1.1)
         confidence = exp(-gap / (6.5 * random_factor)) * (1 + round_number * 0.2)
         if confidence <= confidence_threshold:
             return None, confidence, confidence_threshold

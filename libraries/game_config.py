@@ -11,6 +11,7 @@ class PointRules:
     first_round_play: int
     first_round_leapfrog_steal: int
     second_round_play: int
+    second_round_leapfrog_steal: int
     forced_play_penalty: int
 
 

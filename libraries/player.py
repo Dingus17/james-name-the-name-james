@@ -9,6 +9,9 @@ class Player:
         self.engine = engine
         self.hand: list[int] = []
         self.points = start_points
+        self.leapfrogs = 0
+        self.leapfrogged = 0
+        self.penalties = 0
 
     def draw_tile(self, tile_bag: TileBag) -> None:
         tile = tile_bag.draw_tile()
