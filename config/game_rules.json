@@ -13,16 +13,14 @@
   },
   "players": [
     {
-      "name": "ML Agent 1",
+      "name": "Smart Little Frog",
       "engine": "ml",
-      "model_path": "models/leapfrog_ppo.zip",
-      "deterministic": true
+      "model_path": "models/leapfrog_ppo_gen5.zip",
+      "deterministic": false
     },
     {
-      "name": "ML Agent 2",
-      "engine": "ml",
-      "model_path": "models/leapfrog_ppo.zip",
-      "deterministic": true
+      "name": "Random",
+      "engine": "random"
     },
     {
       "name": "Cautious",

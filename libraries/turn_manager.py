@@ -106,6 +106,9 @@ class TurnManager:
             return True
         return all(not player.has_tiles() for player in self.players)
 
+    def player_index(self, player: Player) -> int:
+        return self.players.index(player)
+
     def execute_play(self, player: Player, round_number: int, forced: bool = False) -> None:
         last_tile_before_play = self.board.last_tile
         tile = player.lowest_playable_tile(last_tile_before_play)
@@ -116,7 +119,14 @@ class TurnManager:
         if skipped_plays:
             self.resolve_skipped_plays(player, skipped_plays, round_number)
 
-        self.board.place_tile(tile)
+        placement_kind = "forced" if forced else "normal"
+        self.board.place_tile(
+            tile,
+            player_index=self.player_index(player),
+            round_number=round_number,
+            kind=placement_kind,
+            turn_count=self.turn_count,
+        )
         player.remove_tile(tile)
 
         if not forced or self.turn_count == 1:
@@ -149,7 +159,13 @@ class TurnManager:
         round_number: int,
     ) -> None:
         for tile, skipped_player in skipped_tiles:
-            self.board.place_tile(tile)
+            self.board.place_tile(
+                tile,
+                player_index=self.player_index(skipped_player),
+                round_number=round_number,
+                kind="skipped",
+                turn_count=self.turn_count,
+            )
             skipped_player.remove_tile(tile)
             if round_number == 1:
                 steal_amount = self.config.points.first_round_leapfrog_steal

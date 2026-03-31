@@ -4,9 +4,10 @@ import random
 
 
 class TileBag:
-    def __init__(self, min_tile: int, max_tile: int):
+    def __init__(self, min_tile: int, max_tile: int, rng: random.Random | None = None):
+        self.rng = rng if rng is not None else random.SystemRandom()
         self.tiles = list(range(min_tile, max_tile + 1))
-        random.shuffle(self.tiles)
+        self.rng.shuffle(self.tiles)
 
     def draw_tile(self) -> int | None:
         if not self.tiles:

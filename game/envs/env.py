@@ -8,6 +8,7 @@ import numpy as np
 
 from libraries.bag import TileBag
 from libraries.board import GameBoard
+from libraries.config_overrides import apply_player_overrides
 from libraries.game_config import GameConfig, load_config
 from libraries.player import Player
 from libraries.player_engines.engine_factory import create_player_engine
@@ -40,8 +41,17 @@ class LeapFrogEnv(gym.Env):
         config_path: str = "config/game_rules.json",
         num_players: int | None = None,
         controlled_player_indices: list[int] | None = None,
+        player_engine_overrides: dict[int, str] | None = None,
+        player_model_path_overrides: dict[int, str | None] | None = None,
+        player_deterministic_overrides: dict[int, bool] | None = None,
     ):
-        self.config: GameConfig = load_config(config_path)
+        base_config = load_config(config_path)
+        self.config: GameConfig = apply_player_overrides(
+            base_config,
+            engine_overrides=player_engine_overrides,
+            model_path_overrides=player_model_path_overrides,
+            deterministic_overrides=player_deterministic_overrides,
+        )
         config_player_count = len(self.config.players)
 
         if num_players is None:
@@ -90,7 +100,7 @@ class LeapFrogEnv(gym.Env):
                     shape=(1,),
                     dtype=np.int32,
                 ),
-                "game_round": gym.spaces.Discrete(2, start=1),
+                "game_round": gym.spaces.Discrete(2),
             }
         )
 
@@ -121,11 +131,13 @@ class LeapFrogEnv(gym.Env):
     def reset(self, *, seed: int | None = None, options: dict[str, Any] | None = None):
         super().reset(seed=seed)
         _ = options
+        tile_rng = None
         if seed is not None:
             random.seed(seed)
             np.random.seed(seed)
+            tile_rng = random.Random(seed)
 
-        self.tile_bag = TileBag(self.config.min_tile, self.config.max_tile)
+        self.tile_bag = TileBag(self.config.min_tile, self.config.max_tile, rng=tile_rng)
         self.game_board = GameBoard(self.config.board_size)
 
         player_configs = self.config.players[: self.num_players]
@@ -260,6 +272,8 @@ class LeapFrogEnv(gym.Env):
 
     def _normalize_action_map(self, action: int | dict[str, int] | dict[int, int]) -> dict[int, int]:
         if self.single_agent_mode:
+            if isinstance(action, np.integer):
+                action = int(action)
             if not isinstance(action, int):
                 raise ValueError("Single-agent mode expects an integer action")
             return {self.controlled_player_indices[0]: action}
@@ -284,6 +298,7 @@ class LeapFrogEnv(gym.Env):
 
         last_tile = self.game_board.last_tile if self.game_board.last_tile is not None else 0
         round_number = self.turn_manager.turn_state.round_number if self.turn_manager.turn_state else 1
+        encoded_round = max(0, min(1, round_number - 1))
 
         other_sizes = [
             len(other_player.hand)
@@ -296,7 +311,7 @@ class LeapFrogEnv(gym.Env):
             "agent_hand": np.array(padded_remaining, dtype=np.int32),
             "other_player_tiles_left": np.array(other_sizes, dtype=np.int32),
             "last_tile": np.array([last_tile], dtype=np.int32),
-            "game_round": int(round_number),
+            "game_round": encoded_round,
         }
 
     def _get_observation(self):

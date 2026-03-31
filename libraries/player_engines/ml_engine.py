@@ -99,11 +99,12 @@ class MLPlayerEngine:
 
         padded_other_hand_sizes = list(other_player_hand_sizes[: self.num_players - 1])
         padded_other_hand_sizes += [0] * (self.num_players - 1 - len(padded_other_hand_sizes))
+        encoded_round = max(0, min(1, round_number - 1))
 
         return {
             "agent_lowest_tile": [lowest_tile],
             "agent_hand": padded_remaining,
             "other_player_tiles_left": padded_other_hand_sizes,
             "last_tile": [last_tile if last_tile is not None else 0],
-            "game_round": int(round_number),
+            "game_round": encoded_round,
         }
