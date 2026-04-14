@@ -7,17 +7,11 @@
     "start_points": 10,
     "first_round_play": 2,
     "first_round_leapfrog_steal": 3,
-    "second_round_play": 2,
-    "second_round_leapfrog_steal": 3,
+    "second_round_play": 1,
+    "second_round_leapfrog_steal": 2,
     "forced_play_penalty": 5
   },
   "players": [
-    {
-      "name": "Smart Little Frog 2",
-      "engine": "ml",
-      "model_path": "models/leapfrog_ppo_gen2.zip",
-      "deterministic": false
-    },
     {
       "name": "Smart Little Frog 3",
       "engine": "ml",
@@ -25,17 +19,24 @@
       "deterministic": false
     },
     {
-    
       "name": "Smart Little Frog 4",
       "engine": "ml",
       "model_path": "models/leapfrog_ppo_gen4.zip",
       "deterministic": false
     },
-    {    
+    {
+    
       "name": "Smart Little Frog 5",
       "engine": "ml",
       "model_path": "models/leapfrog_ppo_gen5.zip",
       "deterministic": false
+    },
+    {    
+      "name": "Super Frog 5",
+      "engine": "ml",
+      "model_path": "models/superfrog_gen5.zip",
+      "deterministic": false
     }
   ]
+
 }
