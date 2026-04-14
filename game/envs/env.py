@@ -73,7 +73,8 @@ class LeapFrogEnv(gym.Env):
                 raise ValueError(f"Controlled player index {idx} is out of range")
 
         self.single_agent_mode = len(self.controlled_player_indices) == 1
-        self._encoded_hand_size = max(0, self.config.hand_size - 1)
+        self._tile_feature_size = self.config.max_tile - self.config.min_tile + 1
+        self._max_tiles_in_game = self._tile_feature_size
 
         self._single_observation_space = gym.spaces.Dict(
             {
@@ -85,13 +86,13 @@ class LeapFrogEnv(gym.Env):
                 ),
                 "agent_hand": gym.spaces.Box(
                     low=0,
-                    high=self.config.max_tile,
-                    shape=(self._encoded_hand_size,),
-                    dtype=np.int32,
+                    high=1,
+                    shape=(self._tile_feature_size,),
+                    dtype=np.int8,
                 ),
                 "other_player_tiles_left": gym.spaces.Box(
                     low=0,
-                    high=self.config.hand_size,
+                    high=self._max_tiles_in_game,
                     shape=(self.num_players - 1,),
                     dtype=np.int32,
                 ),
@@ -296,8 +297,11 @@ class LeapFrogEnv(gym.Env):
         sorted_hand = sorted(player.hand)
 
         lowest_tile = sorted_hand[0] if sorted_hand else 0
-        remaining_tiles = sorted_hand[1 : self.config.hand_size]
-        padded_remaining = remaining_tiles + [0] * (self._encoded_hand_size - len(remaining_tiles))
+        encoded_hand = np.zeros(self._tile_feature_size, dtype=np.int8)
+        for tile in sorted_hand:
+            tile_index = tile - self.config.min_tile
+            if 0 <= tile_index < self._tile_feature_size:
+                encoded_hand[tile_index] = 1
 
         last_tile = self.game_board.last_tile if self.game_board.last_tile is not None else 0
         round_number = self.turn_manager.turn_state.round_number if self.turn_manager.turn_state else 1
@@ -311,7 +315,7 @@ class LeapFrogEnv(gym.Env):
 
         return {
             "agent_lowest_tile": np.array([lowest_tile], dtype=np.int32),
-            "agent_hand": np.array(padded_remaining, dtype=np.int32),
+            "agent_hand": encoded_hand,
             "other_player_tiles_left": np.array(other_sizes, dtype=np.int32),
             "last_tile": np.array([last_tile], dtype=np.int32),
             "game_round": encoded_round,

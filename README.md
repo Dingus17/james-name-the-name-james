@@ -74,3 +74,9 @@ Edit `config/game_rules.json` to customize:
 - player lineup and engines.
 
 The game now handles variable hand sizes, including cases where total requested dealt tiles exceed available tiles (players will simply draw what is available).
+
+For PPO training/inference, the observation schema is hand-size invariant:
+- the acting player's hand is encoded against the full tile range rather than the configured hand size,
+- other players' remaining tile counts are tracked independently of `hand_size` and can grow up to the total tile pool.
+
+If you have older PPO checkpoints that were trained against the previous hand-size-shaped observation, retrain them before using them with the current code.

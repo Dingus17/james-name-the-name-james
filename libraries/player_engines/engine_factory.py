@@ -29,6 +29,7 @@ def create_player_engine(player_config: PlayerConfig, game_config: GameConfig, n
     if engine_name == "ml":
         return MLPlayerEngine(
             hand_size=game_config.hand_size,
+            min_tile=game_config.min_tile,
             num_players=num_players,
             max_tile=game_config.max_tile,
             model_path=player_config.model_path,
