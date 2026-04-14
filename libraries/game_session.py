@@ -20,7 +20,58 @@ class GameSession:
         self.finished = False
         self.last_event = "Waiting to start"
         self.move_log: list[str] = []
+        self.awaiting_human_index: int | None = None
         self._set_up_game()
+
+    def pending_human_decision(self) -> dict[str, int | str | None] | None:
+        if self.awaiting_human_index is None or self.turn_manager.turn_state is None:
+            return None
+
+        player = self.players[self.awaiting_human_index]
+        playable = player.lowest_playable_tile(self.game_board.last_tile)
+        return {
+            "player_index": self.awaiting_human_index,
+            "player_name": player.name,
+            "round_number": self.turn_manager.turn_state.round_number,
+            "turn_count": self.turn_count,
+            "last_tile": self.game_board.last_tile,
+            "playable_tile": playable,
+            "hand_size": len(player.hand),
+        }
+
+    def submit_human_decision(self, play: bool) -> None:
+        if self.awaiting_human_index is None:
+            raise RuntimeError("No human action is pending")
+
+        current_index = self.awaiting_human_index
+        self.awaiting_human_index = None
+
+        player = self.players[current_index]
+        round_number = self.turn_manager.turn_state.round_number
+        tile = player.lowest_playable_tile(self.game_board.last_tile)
+        self.turn_manager.apply_action(current_index, play=play)
+
+        if play and tile is not None:
+            placement = self.game_board.placements[-1]
+            self._record_event(
+                f"T{placement.turn_count} R{placement.round_number} {placement.kind}: "
+                f"{player.name} -> {tile} (human)"
+            )
+        elif play and tile is None:
+            self._record_event(
+                f"T{self.turn_count} R{round_number}: {player.name} wanted to play but had no legal tile"
+            )
+        else:
+            if tile is None:
+                self._record_event(
+                    f"T{self.turn_count} R{round_number}: {player.name} passed (human, no legal tile)"
+                )
+            else:
+                self._record_event(
+                    f"T{self.turn_count} R{round_number}: {player.name} passed on {tile} (human)"
+                )
+
+        self.finished = self.turn_manager.game_over()
 
     @property
     def turn_count(self) -> int:
@@ -74,6 +125,9 @@ class GameSession:
             self._record_event(f"T{self.turn_count} started")
             return True
 
+        if self.awaiting_human_index is not None:
+            return True
+
         current_index = self.turn_manager.current_player_index()
         if current_index is None:
             forced_index = self.turn_manager.advance_round_or_turn()
@@ -90,6 +144,16 @@ class GameSession:
             return True
 
         player = self.players[current_index]
+        if player.engine.__class__.__name__ == "HumanPlayerEngine":
+            self.awaiting_human_index = current_index
+            decision = self.pending_human_decision()
+            playable_text = decision["playable_tile"] if decision is not None else None
+            self._record_event(
+                f"T{self.turn_count} R{self.round_number}: waiting for {player.name} "
+                f"(human) decision; lowest legal tile: {playable_text if playable_text is not None else '-'}"
+            )
+            return True
+
         if not player.has_tiles():
             self.turn_manager.apply_action(current_index, play=False)
             self._record_event(f"T{self.turn_count} R{self.round_number}: {player.name} had no playable tiles")
@@ -140,6 +204,10 @@ class GameSession:
 
     def _first_turn(self) -> None:
         self.turn_manager.start_turn()
+        if all(not player.has_tiles() for player in self.players):
+            self._record_event("No opening move possible because every hand is empty")
+            return
+
         waiting_cycles = 0
 
         while True:

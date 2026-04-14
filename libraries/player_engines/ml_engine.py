@@ -17,6 +17,7 @@ class MLPlayerEngine:
         deterministic: bool = True,
     ):
         self.hand_size = hand_size
+        self._encoded_hand_size = max(0, hand_size - 1)
         self.num_players = num_players
         self.max_tile = max_tile
         self.model_path = model_path
@@ -95,7 +96,7 @@ class MLPlayerEngine:
         sorted_hand = sorted(hand)
         lowest_tile = sorted_hand[0] if sorted_hand else 0
         remaining_tiles = sorted_hand[1 : self.hand_size]
-        padded_remaining = remaining_tiles + [0] * (self.hand_size - 1 - len(remaining_tiles))
+        padded_remaining = remaining_tiles + [0] * (self._encoded_hand_size - len(remaining_tiles))
 
         padded_other_hand_sizes = list(other_player_hand_sizes[: self.num_players - 1])
         padded_other_hand_sizes += [0] * (self.num_players - 1 - len(padded_other_hand_sizes))

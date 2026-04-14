@@ -49,6 +49,14 @@ def build_arg_parser() -> argparse.ArgumentParser:
         metavar="INDEX=PATH",
         help="Override a player's model path for this run.",
     )
+    parser.add_argument(
+        "--human-player",
+        action="append",
+        type=int,
+        default=[],
+        metavar="INDEX",
+        help="Mark a player index as human-controlled for interactive decisions.",
+    )
     return parser
 
 
@@ -56,6 +64,7 @@ def build_session(
     config_path: str,
     player_engine_specs: list[str],
     player_model_specs: list[str],
+    human_players: list[int],
 ) -> GameSession:
     config = load_config(config_path)
     config = apply_player_overrides(
@@ -63,6 +72,11 @@ def build_session(
         engine_overrides=parse_player_override_specs(player_engine_specs, "engine"),
         model_path_overrides=parse_player_override_specs(player_model_specs, "model"),
     )
+    if human_players:
+        config = apply_player_overrides(
+            config,
+            engine_overrides={player_index: "human" for player_index in human_players},
+        )
     players = []
     num_players = len(config.players)
     for player_config in config.players:
@@ -216,6 +230,8 @@ def draw_session(surface, session: GameSession, panel_rect, game_index: int, fon
     draw_text(surface, body_font, state_text, TEXT, panel_rect.x + 118, header_y + 3)
     if session.finished:
         draw_badge(surface, small_font, "Finished", (255, 255, 255), PANEL_BORDER, panel_rect.right - 96, header_y)
+    elif session.pending_human_decision() is not None:
+        draw_badge(surface, small_font, "Awaiting Human", (255, 255, 255), (167, 110, 39), panel_rect.right - 146, header_y)
 
     board_rect = surface.get_rect().copy()
     board_rect.x = panel_rect.x + 16
@@ -284,7 +300,7 @@ def run_visualizer() -> None:
     fonts = (title_font, body_font, small_font, tiny_font)
 
     sessions = [
-        build_session(args.config, args.player_engine, args.player_model)
+        build_session(args.config, args.player_engine, args.player_model, args.human_player)
         for _ in range(args.games)
     ]
 
@@ -302,6 +318,16 @@ def run_visualizer() -> None:
                     return
                 if event.key == pygame.K_SPACE:
                     paused = not paused
+                if event.key == pygame.K_p:
+                    for session in sessions:
+                        if session.pending_human_decision() is not None:
+                            session.submit_human_decision(play=True)
+                            break
+                if event.key == pygame.K_o:
+                    for session in sessions:
+                        if session.pending_human_decision() is not None:
+                            session.submit_human_decision(play=False)
+                            break
 
         now = pygame.time.get_ticks()
         if not paused and now - last_tick >= args.tick_ms:
@@ -310,7 +336,7 @@ def run_visualizer() -> None:
             last_tick = now
 
         screen.fill(BACKGROUND)
-        header = f"SPACE pause/resume  ESC quit  Tick {args.tick_ms}ms"
+        header = f"SPACE pause/resume  P play  O pass  ESC quit  Tick {args.tick_ms}ms"
         draw_text(screen, body_font, header, TEXT, 18, 12)
 
         columns = 1 if len(sessions) == 1 else 2
