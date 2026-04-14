@@ -27,10 +27,24 @@ def build_arg_parser() -> argparse.ArgumentParser:
         metavar="INDEX=PATH",
         help="Override a player's model zip path for this run.",
     )
+    parser.add_argument(
+        "--human-player",
+        action="append",
+        type=int,
+        default=[],
+        metavar="INDEX",
+        help="Mark a player index as human-controlled for command-line play.",
+    )
     return parser
 
 
-def run_game_set(num_games: int, config_path: str, player_engine_specs: list[str], player_model_specs: list[str]) -> None:
+def run_game_set(
+    num_games: int,
+    config_path: str,
+    player_engine_specs: list[str],
+    player_model_specs: list[str],
+    human_players: list[int],
+) -> None:
     engine_overrides = parse_player_override_specs(player_engine_specs, "engine")
     model_overrides = parse_player_override_specs(player_model_specs, "model")
 
@@ -42,6 +56,7 @@ def run_game_set(num_games: int, config_path: str, player_engine_specs: list[str
                 config_path=config_path,
                 player_engine_overrides=engine_overrides,
                 player_model_overrides=model_overrides,
+                human_players=human_players,
             )
         )
     compute_statistics(results_list)
@@ -96,6 +111,7 @@ def run_game(
     config_path: str,
     player_engine_overrides: dict[int, str] | None = None,
     player_model_overrides: dict[int, str] | None = None,
+    human_players: list[int] | None = None,
 ) -> dict[str, dict[str, int]]:
     config = load_config(config_path)
     config = apply_player_overrides(
@@ -103,6 +119,14 @@ def run_game(
         engine_overrides=player_engine_overrides,
         model_path_overrides=player_model_overrides,
     )
+    human_players = human_players or []
+
+    engine_overrides = dict(player_engine_overrides or {})
+    for index in human_players:
+        engine_overrides[index] = "human"
+
+    if engine_overrides:
+        config = apply_player_overrides(config, engine_overrides=engine_overrides)
 
     players = []
     num_players = len(config.players)
@@ -112,7 +136,44 @@ def run_game(
         players.append(Player(player_config.name, engine, config.points.start_points))
 
     game = GameOrchestrator(players, config)
-    return game.play()
+    if not human_players:
+        return game.play()
+
+    if any(index < 0 or index >= len(players) for index in human_players):
+        raise ValueError(f"Invalid --human-player index in {human_players}")
+
+    while game.step():
+        if game.started:
+            print(game.last_event)
+            if game.turn_count > 0:
+                game._print_scores()
+
+        pending = game.pending_human_decision()
+        if pending is None:
+            continue
+
+        player = players[pending["player_index"]]
+        print(f"\n{player.name}'s turn (human control)")
+        print(f"- Turn {pending['turn_count']} Round {pending['round_number']}")
+        print(f"- Last tile: {pending['last_tile'] if pending['last_tile'] is not None else '-'}")
+        print(f"- Your hand: {sorted(player.hand)}")
+        print(f"- Other hand sizes: {game.turn_manager.other_player_hand_sizes(player)}")
+        print(
+            f"- Lowest legal tile: {pending['playable_tile'] if pending['playable_tile'] is not None else '-'}"
+        )
+
+        while True:
+            response = input("Play lowest legal tile? [y/n]: ").strip().lower()
+            if response in {"y", "yes"}:
+                game.submit_human_decision(play=True)
+                break
+            if response in {"n", "no"}:
+                game.submit_human_decision(play=False)
+                break
+            print("Please enter 'y' or 'n'.")
+
+    game._print_final_scores()
+    return game.results()
 
 
 if __name__ == "__main__":
@@ -122,4 +183,5 @@ if __name__ == "__main__":
         config_path=args.config,
         player_engine_specs=args.player_engine,
         player_model_specs=args.player_model,
+        human_players=args.human_player,
     )

@@ -73,6 +73,7 @@ class LeapFrogEnv(gym.Env):
                 raise ValueError(f"Controlled player index {idx} is out of range")
 
         self.single_agent_mode = len(self.controlled_player_indices) == 1
+        self._encoded_hand_size = max(0, self.config.hand_size - 1)
 
         self._single_observation_space = gym.spaces.Dict(
             {
@@ -85,7 +86,7 @@ class LeapFrogEnv(gym.Env):
                 "agent_hand": gym.spaces.Box(
                     low=0,
                     high=self.config.max_tile,
-                    shape=(self.config.hand_size - 1,),
+                    shape=(self._encoded_hand_size,),
                     dtype=np.int32,
                 ),
                 "other_player_tiles_left": gym.spaces.Box(
@@ -231,6 +232,8 @@ class LeapFrogEnv(gym.Env):
         waiting_cycles = 0
 
         while True:
+            if all(not player.has_tiles() for player in self.players):
+                return
             for index, player in enumerate(self.players):
                 if player.engine.decide_to_start(player.hand, waiting_cycles):
                     self.turn_manager.leading_player_index = index
@@ -294,7 +297,7 @@ class LeapFrogEnv(gym.Env):
 
         lowest_tile = sorted_hand[0] if sorted_hand else 0
         remaining_tiles = sorted_hand[1 : self.config.hand_size]
-        padded_remaining = remaining_tiles + [0] * (self.config.hand_size - 1 - len(remaining_tiles))
+        padded_remaining = remaining_tiles + [0] * (self._encoded_hand_size - len(remaining_tiles))
 
         last_tile = self.game_board.last_tile if self.game_board.last_tile is not None else 0
         round_number = self.turn_manager.turn_state.round_number if self.turn_manager.turn_state else 1
