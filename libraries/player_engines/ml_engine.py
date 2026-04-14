@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from pathlib import Path
 
+import numpy as np
+
 from libraries.player_engines.random_engine import RandomPlayerEngine
 
 
@@ -25,6 +27,7 @@ class MLPlayerEngine:
 
         self._fallback_engine = RandomPlayerEngine()
         self._model = self._load_model(model_path)
+        self._expects_box_observation = self._detect_box_observation_model()
 
     def _load_model(self, model_path: str | None):
         if not model_path:
@@ -42,6 +45,13 @@ class MLPlayerEngine:
             return None
 
         return PPO.load(model_file)
+    
+    def _detect_box_observation_model(self) -> bool:
+        if self._model is None:
+            return False
+
+        observation_space = getattr(self._model, "observation_space", None)
+        return observation_space is not None and observation_space.__class__.__name__ == "Box"
 
     def decide_to_start(self, hand: list[int], time_waited: int = 0) -> bool:
         return self._fallback_engine.decide_to_start(hand, time_waited)
@@ -92,7 +102,7 @@ class MLPlayerEngine:
         last_tile: int | None,
         round_number: int,
         other_player_hand_sizes: list[int],
-    ) -> dict[str, list[int] | int]:
+    ) -> dict[str, list[int] | int] | np.ndarray:
         sorted_hand = sorted(hand)
         lowest_tile = sorted_hand[0] if sorted_hand else 0
         remaining_tiles = sorted_hand[1 : self.hand_size]
@@ -101,6 +111,9 @@ class MLPlayerEngine:
         padded_other_hand_sizes = list(other_player_hand_sizes[: self.num_players - 1])
         padded_other_hand_sizes += [0] * (self.num_players - 1 - len(padded_other_hand_sizes))
         encoded_round = max(0, min(1, round_number - 1))
+
+        if self._expects_box_observation:
+            return np.asarray(padded_remaining, dtype=np.int32)
 
         return {
             "agent_lowest_tile": [lowest_tile],

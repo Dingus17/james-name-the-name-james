@@ -2,7 +2,7 @@
   "board_size": 100,
   "min_tile": 1,
   "max_tile": 100,
-  "hand_size": 7,
+  "hand_size": 10,
   "points": {
     "start_points": 10,
     "first_round_play": 2,
@@ -13,22 +13,29 @@
   },
   "players": [
     {
-      "name": "Smart Little Frog",
+      "name": "Smart Little Frog 2",
       "engine": "ml",
-      "model_path": "models/leapfrog_ppo_gen5.zip",
+      "model_path": "models/leapfrog_ppo_gen2.zip",
       "deterministic": false
     },
     {
-      "name": "Random",
-      "engine": "random"
+      "name": "Smart Little Frog 3",
+      "engine": "ml",
+      "model_path": "models/leapfrog_ppo_gen3.zip",
+      "deterministic": false
     },
     {
-      "name": "Cautious",
-      "engine": "cautious"
+    
+      "name": "Smart Little Frog 4",
+      "engine": "ml",
+      "model_path": "models/leapfrog_ppo_gen4.zip",
+      "deterministic": false
     },
-    {
-      "name": "Very Confident",
-      "engine": "very_confident"
+    {    
+      "name": "Smart Little Frog 5",
+      "engine": "ml",
+      "model_path": "models/leapfrog_ppo_gen5.zip",
+      "deterministic": false
     }
   ]
 }
