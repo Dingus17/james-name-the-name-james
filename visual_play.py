@@ -82,7 +82,7 @@ def build_session(
     for player_config in config.players:
         engine = create_player_engine(player_config, config, num_players)
         players.append(Player(player_config.name, engine, config.points.start_points))
-    return GameSession(players, config)
+    return GameSession(players, config, human_player_indices=human_players)
 
 
 def fit_text(text: str, max_chars: int) -> str:
@@ -182,7 +182,9 @@ def draw_player_row(surface, session: GameSession, player_index: int, x: int, y:
         x,
         y + 40,
     )
-    hand_text = " ".join(str(tile) for tile in sorted(player.hand)) or "-"
+    hand_visible = (not session.has_human_players()) or session.is_human_player(player_index)
+    hand_text = " ".join(str(tile) for tile in sorted(player.hand)) if hand_visible else "[hidden]"
+    hand_text = hand_text or "-"
     draw_text(surface, small_font, fit_text(f"Hand: {hand_text}", max(24, width // 8)), MUTED, x, y + 58)
     return y + 82
 
