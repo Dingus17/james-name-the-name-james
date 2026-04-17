@@ -6,10 +6,18 @@ from libraries.player import Player
 
 
 class GameOrchestrator(GameSession):
-    def __init__(self, players: list[Player], config: GameConfig):
-        super().__init__(players, config)
-        for player in self.players:
-            print("{}'s starting hand: {}".format(player.name, sorted(player.hand)))
+    def __init__(
+        self,
+        players: list[Player],
+        config: GameConfig,
+        human_player_indices: list[int] | None = None,
+    ):
+        super().__init__(players, config, human_player_indices=human_player_indices)
+        for index, player in enumerate(self.players):
+            if self.has_human_players() and not self.is_human_player(index):
+                print(f"{player.name}'s starting hand: [hidden]")
+            else:
+                print(f"{player.name}'s starting hand: {sorted(player.hand)}")
 
     def play(self) -> dict[str, dict[str, int]]:
         if not self.players:

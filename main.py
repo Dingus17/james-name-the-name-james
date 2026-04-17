@@ -135,7 +135,7 @@ def run_game(
         engine = create_player_engine(player_config, config, num_players)
         players.append(Player(player_config.name, engine, config.points.start_points))
 
-    game = GameOrchestrator(players, config)
+    game = GameOrchestrator(players, config, human_player_indices=human_players)
     if not human_players:
         return game.play()
 
