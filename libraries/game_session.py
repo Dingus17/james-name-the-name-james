@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import random
+
 from libraries.bag import TileBag
 from libraries.board import GameBoard
 from libraries.game_config import GameConfig
@@ -228,26 +230,17 @@ class GameSession:
         return True
 
     def _first_turn(self) -> None:
-        self.turn_manager.start_turn()
         if all(not player.has_tiles() for player in self.players):
+            self.turn_manager.start_turn()
             self._record_event("No opening move possible because every hand is empty")
             return
 
-        waiting_cycles = 0
+        starting_index = random.randrange(len(self.players))
+        self.turn_manager.leading_player_index = starting_index
+        self.turn_manager.start_turn()
 
-        while True:
-            for index, player in enumerate(self.players):
-                if player.engine.decide_to_start(player.hand, waiting_cycles):
-                    self.turn_manager.leading_player_index = index
-                    self.turn_manager.execute_play(player, round_number=1, forced=True)
-                    self.turn_manager.start_turn()
-                    opening_tile = self.game_board.last_tile
-                    self._record_event(
-                        f"T1 R1 forced-open: {player.name} -> {opening_tile} "
-                        f"after {waiting_cycles} waits"
-                    )
-                    return
-            waiting_cycles += 1
+        starter = self.players[starting_index]
+        self._record_event(f"T1 R1 starting player selected at random: {starter.name}")
 
     def _build_play_event(
         self,
